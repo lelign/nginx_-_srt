@@ -1,0 +1,246 @@
+# nginx install
+sudo apt update
+sudo apt install nginx
+sudo ufw allow 'Nginx HTTP'
+	Rule added
+	Rule added (v6)
+sudo ufw allow 'Nginx HTTPS'
+	Rule added
+	Rule added (v6)
+# enable on boot
+sudo systemctl enable nginx
+
+# check
+systemctl status nginx
+	OK
+
+wget localhost
+cat index.html | grep 'Welcome to nginx!'
+	<title>Welcome to nginx!</title>
+	<h1>Welcome to nginx!</h1>
+
+# OK, installed
+
+
+# install nginx modules
+sudo apt install dnf
+
+# currently loaded modules in NGINX
+nginx -V 2>&1 | grep -oP '(?<=--with-http_)[a-zA-Z0-9_]+'
+	ssl_module
+	stub_status_module
+	realip_module
+	auth_request_module
+	v2_module
+	dav_module
+	slice_module
+	addition_module
+	flv_module
+	gunzip_module
+	gzip_static_module
+	mp4_module
+	random_index_module
+	secure_link_module
+	sub_module
+	geoip_module
+	image_filter_module
+	perl_module
+	xslt_module
+
+# install ffmpeg
+sudo apt install ffmpeg
+
+
+
+# configure nginx
+sudo ln -s /etc/nginx/nginx_default.conf /etc/nginx/nginx.conf
+ls /etc/nginx
+	conf.d        fastcgi_params  koi-win     modules-available  nginx.conf          proxy_params  sites-available  snippets      win-utf
+	fastcgi.conf  koi-utf         mime.types  modules-enabled    nginx_default.conf  scgi_params   sites-enabled    uwsgi_params
+sudo nginx -t
+	nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+	nginx: configuration file /etc/nginx/nginx.conf test is successful
+# OK
+sudo cp NGINX/nginx_working.conf /etc/nginx/rtmp_nginx.conf
+sudo mv /etc/nginx/rtmp_nginx.conf /etc/nginx/nginx_rtmp.conf
+sudo ln -s /etc/nginx/nginx_rtmp.conf /etc/nginx/nginx.conf
+file /etc/nginx/nginx.conf
+	/etc/nginx/nginx.conf: symbolic link to /etc/nginx/nginx_rtmp.conf
+
+
+# check syntax
+sudo nginx -t
+	2026/02/19 22:16:36 [emerg] 9643#9643: unknown directive "rtmp" in /etc/nginx/nginx.conf:7
+	nginx: configuration file /etc/nginx/nginx.conf test failed
+
+# sheets!
+# issue
+sudo apt install libnginx-mod-rtmp
+sudo nginx -t
+	nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+	nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+# ok rtmp must be work
+# check rtmp
+ffmpeg -stream_loop 20 -re -i 1.mp4 -c:v copy -c:a aac -ar 44100 -ac 1 -f flv rtmp://localhost:1935/live/stream
+ # OK it's work
+
+
+
+# SRT !!!
+git clone https://github.com/kaltura/nginx-srt-module.git  ^C
+sudo apt-get install libpcre3 libpcre3-dev
+sudo apt-get install libssl-dev
+sudo apt install zlib1g-dev
+
+# try
+cd ~/NGINX/nginx-srt-module
+./ci_build.sh
+
+make[1]: Leaving directory '/tmp/builddir/nginx'
+# something done
+ls /tmp/builddir/nginx
+auto  CHANGES  CHANGES.ru  conf  configure  contrib  html  LICENSE  Makefile  man  nginx-1.23.2  nginx-srt-module  objs  README  src
+ 
+
+
+
+################ yt
+
+
+
+git clone https://github.com/Haivision/srt.git
+cd srt
+git checkout v1.5.3 && ./configure && make -j8 
+sudo make install
+git clone https://gitlab.com/mattwb65/srt-live-server.git
+cd srt-live-server
+nano slscore/common.cpp
+add 
+	#include "time.h"
+make
+
+#******************************************************************************#
+#                          Build successful !                                  #
+#******************************************************************************#
+
+
+# !!!
+srt-live-transmit srt://:30005?mode=listener srt://:30006?mode=caller
+	Media path: 'srt://:30005?mode=listener' --> 'srt://:30006?mode=caller'
+
+srt-live-transmit -h
+	SRT sample application to transmit live streaming.
+	Built with SRT Library version: 1.5.3
+	SRT Library version: 1.5.3, clock type: GETTIME_MONOTONIC
+	Usage: srt-live-transmit [options] <input-uri> <output-uri>
+
+sudo ufw allow 30005/udp; sudo ufw allow 30006/udp
+[sudo] password for igns:        
+Rule added
+Rule added (v6)
+Rule added
+Rule added (v6)
+
+# conf example
+https://www.ionos.co.uk/digitalguide/server/know-how/srt-server-creation/
+nano sls.conf
+srt {
+    worker_threads 1;
+    worker_connections 200;
+    http_port 8181;
+    cors_header *;
+    log_file /dev/stdout;
+    server {
+        listen 8282;
+        latency 2000;
+        domain_player play;
+        domain_publisher live;
+        default_sid play/stream/example;
+        backlog 10;
+        idle_streams_timeout 10;
+        app {
+            app_publisher stream;
+            app_player stream;
+        }
+    }
+}
+
+
+cd bin
+sudo ldconfig
+./sls -c ../sls.conf
+-------------------------------------------------
+           srt-live-srver 
+                    v1.4.x 
+-------------------------------------------------
+    
+2026-02-20 02:29:44:586 SLS INFO: sls_conf_open, parsing conf file='../sls.conf'.
+write pid ok, file='/tmp/sls/pid.txt', pid=40024.
+2026-02-20 02:29:44:587 SLS INFO: 
+srt live server is running...
+
+... and more lines
+
+
+# srt server is OK!
+
+
+# some check ???
+ffmpeg -stream_loop 20 -re -i 1.mp4 -c:v libx264 -f mpegts 'srt://localhost:8081?mode=listener&latency=20000000'
+ffplay 'srt://localhost:8081?mode=caller'
+ffprobe 'srt://localhost:8081?mode=caller'
+
+# more examples for encoders
+https://www.mux.com/docs/guides/use-srt-to-live-stream
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# NGINX используется для активация сервера <RTMP>, необходимого для
+# тестирования работоспособности стримеров <profitt 500>
+
+
+
+nginx_working.conf <= working conf for nginx
+cp nginx_working.conf /etc/nginx/nginx.conf
+sudo systemctl restart nginx.service
+
+
+# check ports && process
+sudo ss -tulpn | grep 1935
+tcp   LISTEN 0      511          0.0.0.0:1935       0.0.0.0:*    users:(("nginx",pid=5897,fd=.....
+
+# check syntaxis
+sudo nginx -t
+
+# для проверки работосопособности NGINX на IRU
+# streaming via ffmpeg (сгенерировать локальный поток rtmp из видеофайла Videos/Video_mp4/1.mp4 и опубликовать его на 
+# локальном сервере <IRU> на порту 1935 как live/stream)
+ffmpeg -stream_loop 20 -re -i Videos/Video_mp4/1.mp4 -c:v copy -c:a aac -ar 44100 -ac 1 -f flv rtmp://localhost:1935/live/stream
+
+
+# check stream exist
+ffprobe rtmp://localhost:1935/live/stream
+Input #0, flv, from 'rtmp://localhost:1935/live/stream':
+  Metadata:
+    |RtmpSampleAccess: true
+  Duration: N/A, start: 1123.674000, bitrate: N/A
+  Stream #0:0: Audio: aac (LC), 48000 Hz, stereo, fltp
+  Stream #0:1: Video: h264 (Main), yuv420p(tv, progressive), 1920x1080 [SAR 1:1 DAR 16:9], 25 fps, 25 tbr, 1k tbn
